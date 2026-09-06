@@ -1,14 +1,12 @@
-import sqlite3
-import app
+from app import app
+from models import Task
 
-conn = sqlite3.connect(app.DATABASE)
 
-cursor = conn.cursor()
+with app.app_context():
+    tasks = Task.query.order_by(Task.id.asc()).all()
 
-cursor.execute('SELECT * FROM tasks')
-rows = cursor.fetchall()
-
-for row in rows:
-    print(rows)
-
-conn.close()
+    if not tasks:
+        print('No tasks found.')
+    else:
+        for task in tasks:
+            print(task.to_dict())

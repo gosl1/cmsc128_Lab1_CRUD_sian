@@ -5,10 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>To-Do List</title>
     <style>
-      * {
-        box-sizing: border-box;
-      }
-
+      * { box-sizing: border-box; }
       body {
         font-family: Arial, sans-serif;
         background: #f4f6f8;
@@ -18,7 +15,6 @@
         align-items: center;
         min-height: 100vh;
       }
-
       .todo-container {
         background: white;
         width: 100%;
@@ -27,18 +23,12 @@
         border-radius: 12px;
         box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
       }
-
-      h1 {
-        text-align: center;
-        margin-top: 0;
-      }
-
+      h1 { text-align: center; margin-top: 0; }
       form {
         display: flex;
         gap: 10px;
         margin-bottom: 20px;
       }
-
       input {
         flex: 1;
         padding: 10px 12px;
@@ -46,7 +36,6 @@
         border-radius: 8px;
         font-size: 16px;
       }
-
       button {
         padding: 10px 14px;
         border: none;
@@ -56,17 +45,12 @@
         cursor: pointer;
         font-size: 16px;
       }
-
-      button:hover {
-        background: #1d68dd;
-      }
-
+      button:hover { background: #1d68dd; }
       ul {
         list-style: none;
         padding: 0;
         margin: 0;
       }
-
       li {
         display: flex;
         align-items: center;
@@ -75,26 +59,20 @@
         padding: 10px 0;
         border-bottom: 1px solid #eee;
       }
-
       .todo-text {
         flex: 1;
         word-break: break-word;
       }
-
       .done {
         text-decoration: line-through;
         color: #888;
       }
-
       .delete-btn {
         background: #e74c3c;
         padding: 6px 10px;
         font-size: 14px;
       }
-
-      .delete-btn:hover {
-        background: #d33f2f;
-      }
+      .delete-btn:hover { background: #d33f2f; }
     </style>
   </head>
   <body>
@@ -102,80 +80,13 @@
       <h1>To-Do List</h1>
 
       <form id="todo-form">
-        <input
-          id="todo-input"
-          type="text"
-          placeholder="Add a task..."
-          autocomplete="off"
-        />
+        <input id="todo-input" type="text" placeholder="Add a task..." autocomplete="off" />
         <button type="submit">Add</button>
       </form>
 
       <ul id="todo-list"></ul>
     </div>
 
-    <script>
-      const form = document.getElementById('todo-form');
-      const input = document.getElementById('todo-input');
-      const list = document.getElementById('todo-list');
-
-      let todos = JSON.parse(localStorage.getItem('todos')) || [];
-
-      function saveTodos() {
-        localStorage.setItem('todos', JSON.stringify(todos));
-      }
-
-      function renderTodos() {
-        list.innerHTML = '';
-
-        todos.forEach((todo, index) => {
-          const item = document.createElement('li');
-
-          const text = document.createElement('span');
-          text.className = 'todo-text' + (todo.done ? ' done' : '');
-          text.textContent = todo.text;
-
-          const checkbox = document.createElement('input');
-          checkbox.type = 'checkbox';
-          checkbox.checked = todo.done;
-          checkbox.addEventListener('change', () => {
-            todos[index].done = checkbox.checked;
-            saveTodos();
-            renderTodos();
-          });
-
-          const deleteBtn = document.createElement('button');
-          deleteBtn.textContent = 'Delete';
-          deleteBtn.className = 'delete-btn';
-          deleteBtn.addEventListener('click', () => {
-            todos.splice(index, 1);
-            saveTodos();
-            renderTodos();
-          });
-
-          item.appendChild(checkbox);
-          item.appendChild(text);
-          item.appendChild(deleteBtn);
-          list.appendChild(item);
-        });
-      }
-
-      form.addEventListener('submit', (event) => {
-        event.preventDefault();
-
-        const text = input.value.trim();
-        if (!text) {
-          return;
-        }
-
-        todos.push({ text, done: false });
-        saveTodos();
-        renderTodos();
-        input.value = '';
-        input.focus();
-      });
-
-      renderTodos();
-    </script>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
   </body>
 </html>
