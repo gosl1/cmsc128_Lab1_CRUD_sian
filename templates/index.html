@@ -12,7 +12,27 @@
       <h1>To-Do List</h1>
 
       <form id="todo-form">
-        <input id="todo-input" type="text" placeholder="Add a task..." autocomplete="off" />
+        <input
+          id="todo-input"
+          type="text"
+          placeholder="Add a task..."
+          autocomplete="off"
+        />
+
+        <input id="due-date" type="datetime-local" />
+
+        <select id="priority">
+          <option value="Low">Low</option>
+          <option value="Med" selected>Med</option>
+          <option value="High">High</option>
+        </select>
+
+        <select id="category">
+          <option value="School">School</option>
+          <option value="Personal">Personal</option>
+          <option value="Others" selected>Others</option>
+        </select>
+
         <button type="submit">Add</button>
       </form>
       

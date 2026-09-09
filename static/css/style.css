@@ -10,8 +10,8 @@
       }
       .todo-container {
         background: white;
-        width: 125%;
-        max-width: 420px;
+        width: 100%;
+        max-width: 760px;
         padding: 24px;
         border-radius: 12px;
         box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
@@ -19,15 +19,26 @@
       h1 { text-align: center; margin-top: 0; }
       form {
         display: flex;
+        flex-wrap: wrap;
         gap: 10px;
         margin-bottom: 20px;
+        align-items: center;
       }
-      input {
-        flex: 1;
+      input,
+      select {
+        flex: 1 1 200px;
+        min-width: 140px;
         padding: 10px 12px;
         border: 1px solid #ccc;
         border-radius: 8px;
         font-size: 16px;
+        background: white;
+      }
+
+      select[multiple] {
+        flex: 1 1 220px;
+        min-height: 84px;
+        padding: 8px 10px;
       }
       button {
         padding: 10px 14px;

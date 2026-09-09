@@ -39,12 +39,20 @@ def get_tasks():
 @app.route('/api/tasks', methods=['POST'])
 def create_task():
     data = request.get_json(silent=True) or {}
+
     title = (data.get('title') or '').strip()
 
     if not title:
         return jsonify({'error': 'Title is required'}), 400
 
-    task = Task(title=title, completed=bool(data.get('completed', False)))
+    task = Task(
+        title=title,
+        due_date=data.get('due_date'),
+        priority=data.get('priority', 'Med'),
+        category=data.get('category', 'Others'),
+        completed=bool(data.get('completed', False))
+    )
+
     db.session.add(task)
     db.session.commit()
 
@@ -58,13 +66,24 @@ def update_task(task_id):
 
     if 'title' in data:
         cleaned_title = str(data['title']).strip()
+
         if cleaned_title:
             task.title = cleaned_title
+
+    if 'due_date' in data:
+        task.due_date = data['due_date']
+
+    if 'priority' in data:
+        task.priority = data['priority']
+
+    if 'category' in data:
+        task.category = data['category']
 
     if 'completed' in data:
         task.completed = bool(data['completed'])
 
     db.session.commit()
+
     return jsonify(task.to_dict()), 200
 
 
