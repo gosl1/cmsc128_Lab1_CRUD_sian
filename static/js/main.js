@@ -1,4 +1,3 @@
-
 const form = document.getElementById('todo-form');
 const input = document.getElementById('todo-input');
 const list = document.getElementById('todo-list');
@@ -40,9 +39,38 @@ function renderTasks(tasks) {
       renderTasks(tasks);
     });
 
+    const editBtn = document.createElement('button');
+    editBtn.className = 'edit-btn';
+    editBtn.textContent = 'Edit';
+
+    editBtn.addEventListener('click', () => {
+
+      const editInput = document.createElement('input');
+      editInput.type = 'text';
+      editInput.value = task.title;
+      text.replaceWith(editInput);
+      editInput.focus()
+
+      const saveBtn = document.createElement('button');
+      saveBtn.className = 'save-btn';
+      saveBtn.textContent = 'Save';
+      editBtn.replaceWith(saveBtn);
+
+      saveBtn.addEventListener('click', async() => {
+        await fetch(`/api/tasks/${task.id}`,{
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({title: editInput.value})
+        });
+        const tasks = await getTasks();
+        renderTasks(tasks);
+      })
+    })
+
     item.appendChild(checkbox);
     item.appendChild(text);
     item.appendChild(deleteBtn);
+    item.appendChild(editBtn);
     list.appendChild(item);
   });
 }

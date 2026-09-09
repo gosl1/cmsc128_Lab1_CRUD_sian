@@ -10,7 +10,7 @@
       }
       .todo-container {
         background: white;
-        width: 100%;
+        width: 125%;
         max-width: 420px;
         padding: 24px;
         border-radius: 12px;
@@ -66,3 +66,17 @@
         font-size: 14px;
       }
       .delete-btn:hover { background: #d33f2f; }
+
+      .edit-btn {
+        background: #2d7ff9;
+        padding: 6px 10px;
+        font-size: 14px;
+      }
+      .edit-btn:hover { background: #2b78ec; }
+
+      .save-btn {
+        background: #1ac533;
+        padding: 6px 10px;
+        font-size: 14px;
+      }
+      .save-btn:hover { background: #19bf32; }
