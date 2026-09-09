@@ -4,76 +4,8 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>To-Do List</title>
-    <style>
-      * { box-sizing: border-box; }
-      body {
-        font-family: Arial, sans-serif;
-        background: #f4f6f8;
-        margin: 0;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        min-height: 100vh;
-      }
-      .todo-container {
-        background: white;
-        width: 100%;
-        max-width: 420px;
-        padding: 24px;
-        border-radius: 12px;
-        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
-      }
-      h1 { text-align: center; margin-top: 0; }
-      form {
-        display: flex;
-        gap: 10px;
-        margin-bottom: 20px;
-      }
-      input {
-        flex: 1;
-        padding: 10px 12px;
-        border: 1px solid #ccc;
-        border-radius: 8px;
-        font-size: 16px;
-      }
-      button {
-        padding: 10px 14px;
-        border: none;
-        border-radius: 8px;
-        background: #2d7ff9;
-        color: white;
-        cursor: pointer;
-        font-size: 16px;
-      }
-      button:hover { background: #1d68dd; }
-      ul {
-        list-style: none;
-        padding: 0;
-        margin: 0;
-      }
-      li {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 10px;
-        padding: 10px 0;
-        border-bottom: 1px solid #eee;
-      }
-      .todo-text {
-        flex: 1;
-        word-break: break-word;
-      }
-      .done {
-        text-decoration: line-through;
-        color: #888;
-      }
-      .delete-btn {
-        background: #e74c3c;
-        padding: 6px 10px;
-        font-size: 14px;
-      }
-      .delete-btn:hover { background: #d33f2f; }
-    </style>
+    <link rel="stylesheet" href="/static/css/style.css"> 
+
   </head>
   <body>
     <div class="todo-container">
@@ -83,7 +15,7 @@
         <input id="todo-input" type="text" placeholder="Add a task..." autocomplete="off" />
         <button type="submit">Add</button>
       </form>
-
+      
       <ul id="todo-list"></ul>
     </div>
 
