@@ -24,7 +24,6 @@ The app uses a Flask backend with SQLite persistence and a simple HTML/CSS/JavaS
 | Frontend | Vanilla HTML, CSS, JavaScript |
 | Password hashing | Werkzeug `generate_password_hash` / `check_password_hash` |
 
-This stack matches the original lab project and keeps the implementation simple while meeting the requirement for real database persistence and session-based authentication.
 
 ## Features Implemented
 
@@ -48,8 +47,6 @@ cmsc128-Lab1_CRUD_Sian/
 ├── static/
 │   ├── css/style.css        # Styling for auth screens, dashboard, and tasks
 │   └── js/main.js            # Client-side auth and task interactions
-├── tests/
-│   └── test_auth.py          # Regression tests covering registration/login/reset behavior
 ├── requirements.txt
 ├── .env.example              # Template for environment variable configuration
 ├── .gitignore                # Ignores secrets and generated local files
@@ -78,7 +75,7 @@ Then edit `.env` and set a secure value for `SECRET_KEY`.
 5. Run the app:
 
 ```bash
-python -c "from app import app; app.run(host='127.0.0.1', port=5000, debug=True)"
+python app.py
 ```
 
 6. Open the browser at:
@@ -114,7 +111,7 @@ The models include:
   - user_id
   - token
   - created_at
-  - expires_at
+  - expires_at 
   - used
 
 This means account data and task data remain saved across browser refreshes and app restarts so long as the SQLite file remains present.
@@ -214,7 +211,4 @@ A user can verify the app by doing the following:
 6. Request and confirm a password reset
 7. Use the app with the new password and ensure the old password no longer works
 
-## Defense Note
-
-For the lab defense, a database inspector tool such as SQLite Browser or an extension that can read the SQLite file should be installed and ready to view the `users` table without exposing plain-text passwords. The password field will appear as a hashed value rather than raw user input.
 
