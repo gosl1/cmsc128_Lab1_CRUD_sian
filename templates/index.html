@@ -3,41 +3,141 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>To-Do List</title>
-    <link rel="stylesheet" href="/static/css/style.css"> 
-
+    <title>CMSC 128 Auth To-Do</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
   </head>
   <body>
-    <div class="todo-container">
-      <h1>To-Do List</h1>
+    <div id="auth-view" class="auth-shell hidden">
+      <div class="panel auth-panel">
+        <div class="auth-tabs">
+          <button type="button" class="tab-button active" data-tab="login">Login</button>
+          <button type="button" class="tab-button" data-tab="register">Sign Up</button>
+        </div>
 
-      <form id="todo-form">
-        <input
-          id="todo-input"
-          type="text"
-          placeholder="Add a task..."
-          autocomplete="off"
-        />
+        <div id="auth-message" class="message-box" aria-live="polite"></div>
 
-        <input id="due-date" type="datetime-local" />
+        <form id="login-form" class="auth-form active">
+          <h2>Welcome back</h2>
+          <label>
+            Username or email
+            <input type="text" name="username" placeholder="username@example.com" required />
+          </label>
+          <label>
+            Password
+            <input type="password" name="password" placeholder="Enter your password" required />
+          </label>
+          <button type="submit">Log In</button>
+        </form>
 
-        <select id="priority">
-          <option value="Low">Low</option>
-          <option value="Med" selected>Med</option>
-          <option value="High">High</option>
-        </select>
+        <form id="register-form" class="auth-form">
+          <h2>Create account</h2>
+          <label>
+            Username or email
+            <input type="text" name="username" placeholder="username@example.com" required />
+          </label>
+          <label>
+            Display name
+            <input type="text" name="display_name" placeholder="Jane Doe" required />
+          </label>
+          <label>
+            Password
+            <input type="password" name="password" placeholder="At least 8 characters" required />
+          </label>
+          <button type="submit">Create Account</button>
+        </form>
 
-        <select id="category">
-          <option value="School">School</option>
-          <option value="Personal">Personal</option>
-          <option value="Others" selected>Others</option>
-        </select>
-
-        <button type="submit">Add</button>
-      </form>
-      
-      <ul id="todo-list"></ul>
+        <div class="password-recovery">
+          <h3>Forgot password?</h3>
+          <form id="reset-request-form" class="inline-form">
+            <input type="text" name="username" placeholder="Username or email" required />
+            <button type="submit">Request reset</button>
+          </form>
+          <form id="reset-confirm-form" class="inline-form">
+            <input type="text" name="token" placeholder="Paste reset token" required />
+            <input type="password" name="password" placeholder="New password" required />
+            <button type="submit">Reset password</button>
+          </form>
+        </div>
+      </div>
     </div>
+
+    <div id="dashboard-view" class="dashboard hidden">
+      <header class="topbar">
+        <div class="topbar-left">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M9 16.2l-3.5-3.5L4 14.2l5 5 11-11-1.5-1.5z" fill="#1a73e8"/>
+          </svg>
+          <span class="brand">Tasks</span>
+        </div>
+
+        <div class="topbar-right">
+          <button id="account-button" class="account-button" type="button" aria-haspopup="true" aria-expanded="false">
+            <span id="account-initial">U</span>
+          </button>
+
+          <div id="account-menu" class="account-menu hidden">
+            <div class="account-menu-header">
+              <div class="account-menu-avatar" id="account-initial-large">U</div>
+              <div>
+                <p id="menu-display-name" class="menu-display-name">User</p>
+                <p id="menu-username" class="menu-username"></p>
+              </div>
+            </div>
+
+            <form id="profile-form" class="account-menu-form">
+              <label>
+                Username or email
+                <input type="text" id="profile-username" required />
+              </label>
+              <label>
+                Display name
+                <input type="text" id="profile-display-name" required />
+              </label>
+              <label>
+                New password
+                <input type="password" id="profile-password" placeholder="Leave blank to keep current" />
+              </label>
+              <button type="submit" class="save-profile-button">Save changes</button>
+            </form>
+
+            <button id="logout-button" type="button" class="logout-menu-button">Log out</button>
+          </div>
+        </div>
+      </header>
+
+      <main class="tasks-main">
+        <button id="add-task-toggle" type="button" class="add-task-toggle">
+          <span class="plus">+</span> Add a task
+        </button>
+
+        <form id="todo-form" class="todo-form hidden">
+          <input id="todo-input" type="text" class="todo-title-input" placeholder="Task title" autocomplete="off" />
+          <div class="todo-form-row">
+            <input id="due-date" type="datetime-local" />
+            <select id="priority">
+              <option value="Low">Low</option>
+              <option value="Med" selected>Med</option>
+              <option value="High">High</option>
+            </select>
+            <select id="category">
+              <option value="School">School</option>
+              <option value="Personal">Personal</option>
+              <option value="Others" selected>Others</option>
+            </select>
+            <div class="todo-form-actions">
+              <button type="button" id="todo-cancel" class="ghost-button">Cancel</button>
+              <button type="submit">Add task</button>
+            </div>
+          </div>
+        </form>
+
+        <ul id="todo-list" class="todo-list"></ul>
+      </main>
+    </div>
+
     <div id="undo-notification" class="undo-notification"></div>
 
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
