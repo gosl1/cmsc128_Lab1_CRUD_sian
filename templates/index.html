@@ -109,6 +109,25 @@
       </header>
 
       <main class="tasks-main">
+        <section class="list-toolbar" aria-label="To-do lists">
+          <label for="active-list">Current list</label>
+          <select id="active-list">
+            <option value="personal">Personal</option>
+          </select>
+
+          <form id="create-list-form" class="list-action-form">
+            <input id="new-list-name" type="text" maxlength="100" aria-label="New collaborative list name" placeholder="New collaborative list name" required />
+            <button type="submit">Create shared list</button>
+          </form>
+
+          <form id="add-member-form" class="list-action-form hidden">
+            <input id="member-username" type="text" aria-label="Username or email to add" placeholder="Username or email to add" required />
+            <button type="submit">Add member</button>
+          </form>
+          <p id="list-description" class="list-description">Your tasks are private to your account.</p>
+        </section>
+        <div id="dashboard-message" class="message-box" aria-live="polite"></div>
+
         <button id="add-task-toggle" type="button" class="add-task-toggle">
           <span class="plus">+</span> Add a task
         </button>

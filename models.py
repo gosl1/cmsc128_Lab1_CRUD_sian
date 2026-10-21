@@ -12,10 +12,6 @@ def utc_now():
 db = SQLAlchemy()
 
 
-# AUTHENTICATION FOUNDATION
-# This project adds real user accounts, session-based login, and password hashing.
-# The following model is the foundation for the next activity: one user can own
-# many tasks, and each task must be tied to a specific account.
 class User(db.Model, UserMixin):
     __tablename__ = 'users'
 
@@ -28,6 +24,16 @@ class User(db.Model, UserMixin):
 
     tasks = db.relationship('Task', back_populates='owner', cascade='all, delete-orphan')
     reset_tokens = db.relationship('PasswordResetToken', back_populates='user', cascade='all, delete-orphan')
+    owned_lists = db.relationship(
+        'CollaborativeList',
+        back_populates='owner',
+        cascade='all, delete-orphan',
+    )
+    list_memberships = db.relationship(
+        'CollaborativeListMembership',
+        back_populates='user',
+        cascade='all, delete-orphan',
+    )
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -58,9 +64,43 @@ class PasswordResetToken(db.Model):
     user = db.relationship('User', back_populates='reset_tokens')
 
 
-# NEXT ACTIVITY FOUNDATION: per-user to-do list design
-# Each task is assigned to exactly one user using user_id.
-# This is what makes the app a multi-user todo system instead of a single shared list.
+class CollaborativeList(db.Model):
+    __tablename__ = 'collaborative_lists'
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    owner_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+    created_at = db.Column(db.DateTime, default=utc_now, nullable=False)
+
+    owner = db.relationship('User', back_populates='owned_lists')
+    memberships = db.relationship(
+        'CollaborativeListMembership',
+        back_populates='collaborative_list',
+        cascade='all, delete-orphan',
+    )
+    tasks = db.relationship('Task', back_populates='collaborative_list')
+
+
+class CollaborativeListMembership(db.Model):
+    __tablename__ = 'collaborative_list_memberships'
+    __table_args__ = (
+        db.UniqueConstraint('list_id', 'user_id', name='uq_collaborative_list_member'),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    list_id = db.Column(
+        db.Integer,
+        db.ForeignKey('collaborative_lists.id'),
+        nullable=False,
+        index=True,
+    )
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+    created_at = db.Column(db.DateTime, default=utc_now, nullable=False)
+
+    collaborative_list = db.relationship('CollaborativeList', back_populates='memberships')
+    user = db.relationship('User', back_populates='list_memberships')
+
+
 class Task(db.Model):
     __tablename__ = 'tasks'
 
@@ -71,10 +111,12 @@ class Task(db.Model):
     category = db.Column(db.String(20), default='Others', nullable=False)
     completed = db.Column(db.Boolean, default=False, nullable=False)
     created_at = db.Column(db.DateTime, default=utc_now, nullable=False)
-    # This field is the key to the next activity: tasks are scoped to the logged-in user.
+    # Kept nullable for legacy tasks; the API assigns the logged-in user to every new task.
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True, index=True)
+    list_id = db.Column(db.Integer, db.ForeignKey('collaborative_lists.id'), nullable=True, index=True)
 
     owner = db.relationship('User', back_populates='tasks')
+    collaborative_list = db.relationship('CollaborativeList', back_populates='tasks')
 
     def __repr__(self):
         return f"Task(id={self.id}, title={self.title!r}, completed={self.completed})"
@@ -89,4 +131,5 @@ class Task(db.Model):
             'completed': self.completed,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'user_id': self.user_id,
+            'list_id': self.list_id,
         }
