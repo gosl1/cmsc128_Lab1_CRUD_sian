@@ -15,6 +15,13 @@ const priorityEl = document.getElementById('priority');
 const categoryEl = document.getElementById('category');
 const todoCancelButton = document.getElementById('todo-cancel');
 const list = document.getElementById('todo-list');
+const activeListSelect = document.getElementById('active-list');
+const createListForm = document.getElementById('create-list-form');
+const newListNameInput = document.getElementById('new-list-name');
+const addMemberForm = document.getElementById('add-member-form');
+const memberUsernameInput = document.getElementById('member-username');
+const listDescription = document.getElementById('list-description');
+const dashboardMessage = document.getElementById('dashboard-message');
 
 const accountButton = document.getElementById('account-button');
 const accountMenu = document.getElementById('account-menu');
@@ -34,10 +41,16 @@ let lastDeleted = null;
 let undoTimeout = null;
 let currentUser = null;
 let openTaskMenu = null;
+let collaborativeLists = [];
 
 function showMessage(text, type = 'info') {
   authMessage.textContent = text;
   authMessage.className = `message-box ${type}`;
+}
+
+function showDashboardMessage(text, type = 'info') {
+  dashboardMessage.textContent = text;
+  dashboardMessage.className = `message-box ${type}`;
 }
 
 async function api(path, options = {}) {
@@ -104,20 +117,67 @@ async function fetchUserProfile() {
     profileUsernameInput.value = currentUser.username;
     profileDisplayNameInput.value = currentUser.display_name || '';
     toggleAuthViews(true);
+    await loadLists();
     await loadTasks();
   } catch (error) {
     currentUser = null;
+    collaborativeLists = [];
     toggleAuthViews(false);
     setActiveTab('login');
   }
 }
 
+function currentCollaborativeList() {
+  return collaborativeLists.find((collaborativeList) => (
+    String(collaborativeList.id) === activeListSelect.value
+  ));
+}
+
+function updateListControls() {
+  const collaborativeList = currentCollaborativeList();
+  addMemberForm.classList.toggle('hidden', !collaborativeList || !collaborativeList.is_owner);
+  if (!collaborativeList) {
+    listDescription.textContent = 'Your tasks are private to your account.';
+  } else if (collaborativeList.is_owner) {
+    listDescription.textContent = `You own this shared list (${collaborativeList.member_count} people).`;
+  } else {
+    listDescription.textContent = `Shared by ${collaborativeList.owner_username}.`;
+  }
+}
+
+async function loadLists(preferredListId = activeListSelect.value) {
+  try {
+    collaborativeLists = await api('/api/lists');
+    activeListSelect.replaceChildren(new Option('Personal', 'personal'));
+    collaborativeLists.forEach((collaborativeList) => {
+      const ownershipLabel = collaborativeList.is_owner
+        ? ' (You own this)'
+        : ` (shared by ${collaborativeList.owner_username})`;
+      activeListSelect.add(new Option(
+        `${collaborativeList.name}${ownershipLabel}`,
+        String(collaborativeList.id),
+      ));
+    });
+
+    const preferredExists = preferredListId === 'personal'
+      || collaborativeLists.some((collaborativeList) => String(collaborativeList.id) === preferredListId);
+    activeListSelect.value = preferredExists ? preferredListId : 'personal';
+    updateListControls();
+  } catch (error) {
+    showDashboardMessage(error.message, 'error');
+  }
+}
+
 async function loadTasks() {
   try {
-    const tasks = await api('/api/tasks');
+    const query = activeListSelect.value === 'personal'
+      ? ''
+      : `?list_id=${encodeURIComponent(activeListSelect.value)}`;
+    const tasks = await api(`/api/tasks${query}`);
     renderTasks(tasks);
+    showDashboardMessage('', 'info');
   } catch (error) {
-    renderTasks([]);
+    showDashboardMessage(error.message, 'error');
   }
 }
 
@@ -132,11 +192,15 @@ function renderTasks(tasks) {
     checkbox.type = 'checkbox';
     checkbox.checked = task.completed;
     checkbox.addEventListener('change', async () => {
-      await api(`/api/tasks/${task.id}`, {
-        method: 'PUT',
-        body: JSON.stringify({ completed: checkbox.checked }),
-      });
-      await loadTasks();
+      try {
+        await api(`/api/tasks/${task.id}`, {
+          method: 'PUT',
+          body: JSON.stringify({ completed: checkbox.checked }),
+        });
+        await loadTasks();
+      } catch (error) {
+        showDashboardMessage(error.message, 'error');
+      }
     });
 
     const text = document.createElement('span');
@@ -208,9 +272,14 @@ function renderTasks(tasks) {
         undoNotificationEl.classList.remove('show');
       }
 
-      await api(`/api/tasks/${task.id}`, { method: 'DELETE' });
-      lastDeleted = task;
-      item.remove();
+      try {
+        await api(`/api/tasks/${task.id}`, { method: 'DELETE' });
+        lastDeleted = task;
+        item.remove();
+      } catch (error) {
+        showDashboardMessage(error.message, 'error');
+        return;
+      }
 
       undoNotificationEl.innerHTML = `
         <span>Task deleted</span>
@@ -221,23 +290,28 @@ function renderTasks(tasks) {
       const undoBtn = document.getElementById('undo-btn');
       undoBtn.addEventListener('click', async () => {
         if (!lastDeleted) return;
-        await api('/api/tasks', {
-          method: 'POST',
-          body: JSON.stringify({
-            title: lastDeleted.title,
-            completed: lastDeleted.completed,
-            due_date: lastDeleted.due_date,
-            priority: lastDeleted.priority,
-            category: lastDeleted.category,
-          }),
-        });
-        lastDeleted = null;
-        if (undoTimeout) {
-          clearTimeout(undoTimeout);
-          undoTimeout = null;
+        try {
+          await api('/api/tasks', {
+            method: 'POST',
+            body: JSON.stringify({
+              title: lastDeleted.title,
+              completed: lastDeleted.completed,
+              due_date: lastDeleted.due_date,
+              priority: lastDeleted.priority,
+              category: lastDeleted.category,
+              list_id: lastDeleted.list_id,
+            }),
+          });
+          lastDeleted = null;
+          if (undoTimeout) {
+            clearTimeout(undoTimeout);
+            undoTimeout = null;
+          }
+          undoNotificationEl.classList.remove('show');
+          await loadTasks();
+        } catch (error) {
+          showDashboardMessage(error.message, 'error');
         }
-        undoNotificationEl.classList.remove('show');
-        await loadTasks();
       });
 
       undoTimeout = setTimeout(() => {
@@ -277,13 +351,17 @@ function renderTasks(tasks) {
 
       const commit = async () => {
         const newTitle = editInput.value.trim();
-        if (newTitle && newTitle !== task.title) {
-          await api(`/api/tasks/${task.id}`, {
-            method: 'PUT',
-            body: JSON.stringify({ title: newTitle }),
-          });
+        try {
+          if (newTitle && newTitle !== task.title) {
+            await api(`/api/tasks/${task.id}`, {
+              method: 'PUT',
+              body: JSON.stringify({ title: newTitle }),
+            });
+          }
+          await loadTasks();
+        } catch (error) {
+          showDashboardMessage(error.message, 'error');
         }
-        await loadTasks();
       };
 
       saveBtn.addEventListener('click', commit);
@@ -397,6 +475,46 @@ function closeTodoForm() {
 addTaskToggle.addEventListener('click', openTodoForm);
 todoCancelButton.addEventListener('click', closeTodoForm);
 
+activeListSelect.addEventListener('change', async () => {
+  updateListControls();
+  closeTodoForm();
+  await loadTasks();
+});
+
+createListForm.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  try {
+    const collaborativeList = await api('/api/lists', {
+      method: 'POST',
+      body: JSON.stringify({ name: newListNameInput.value.trim() }),
+    });
+    createListForm.reset();
+    await loadLists(String(collaborativeList.id));
+    await loadTasks();
+    showDashboardMessage('Collaborative list created.', 'success');
+  } catch (error) {
+    showDashboardMessage(error.message, 'error');
+  }
+});
+
+addMemberForm.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const collaborativeList = currentCollaborativeList();
+  if (!collaborativeList) return;
+
+  try {
+    const result = await api(`/api/lists/${collaborativeList.id}/members`, {
+      method: 'POST',
+      body: JSON.stringify({ username: memberUsernameInput.value.trim() }),
+    });
+    addMemberForm.reset();
+    await loadLists(String(collaborativeList.id));
+    showDashboardMessage(result.message, 'success');
+  } catch (error) {
+    showDashboardMessage(error.message, 'error');
+  }
+});
+
 todoForm.addEventListener('submit', async (event) => {
   event.preventDefault();
   const title = todoInput.value.trim();
@@ -404,18 +522,25 @@ todoForm.addEventListener('submit', async (event) => {
     return;
   }
 
-  await api('/api/tasks', {
-    method: 'POST',
-    body: JSON.stringify({
-      title,
-      due_date: dueDateEl.value || null,
-      priority: priorityEl.value,
-      category: categoryEl.value,
-    }),
-  });
+  try {
+    await api('/api/tasks', {
+      method: 'POST',
+      body: JSON.stringify({
+        title,
+        due_date: dueDateEl.value || null,
+        priority: priorityEl.value,
+        category: categoryEl.value,
+        list_id: activeListSelect.value === 'personal'
+          ? null
+          : Number(activeListSelect.value),
+      }),
+    });
 
-  closeTodoForm();
-  await loadTasks();
+    closeTodoForm();
+    await loadTasks();
+  } catch (error) {
+    showDashboardMessage(error.message, 'error');
+  }
 });
 
 // ---- Account menu ----
@@ -470,6 +595,8 @@ logoutButton.addEventListener('click', async () => {
   try {
     await api('/api/logout', { method: 'POST' });
     currentUser = null;
+    collaborativeLists = [];
+    activeListSelect.replaceChildren(new Option('Personal', 'personal'));
     closeAccountMenu();
     toggleAuthViews(false);
     setActiveTab('login');
@@ -478,6 +605,7 @@ logoutButton.addEventListener('click', async () => {
     profileForm.reset();
     closeTodoForm();
     renderTasks([]);
+    showDashboardMessage('', 'info');
   } catch (error) {
     showMessage(error.message, 'error');
   }

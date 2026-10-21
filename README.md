@@ -1,17 +1,87 @@
-# CMSC 128 Lab 2: Authentication and User Access
+# CMSC 128 Lab 3: Multi-Account To-Do Lists (UBAC)
 
-This project continues the Activity 1 to-do app by adding a secure account system, protected routes, session persistence, and profile/password recovery features.
+This project combines the Activity 1 to-do CRUD application with Activity 2 registration, login, password hashing, and persistent sessions. Each authenticated account has a private personal list and can participate in collaborative lists.
 
-## Overview
+## Features
 
-The app uses a Flask backend with SQLite persistence and a simple HTML/CSS/JavaScript frontend. Users can:
+- Register and log in using a username or email; passwords are stored as Werkzeug password hashes.
+- Persistent SQLite accounts, personal tasks, collaborative lists, memberships, and password-reset tokens.
+- Personal tasks are visible and editable only by their owner.
+- Create collaborative lists, add registered users by username or email, and see lists you own or have joined.
+- Members can create, view, edit, complete, and delete tasks in lists they belong to.
+- Flask-Login protects profile, list, membership, and task endpoints. The server checks list membership and task ownership for every operation.
+- Profile editing, logout, and a local password-reset flow are included.
 
-- Create an account
-- Log in with either a username or email and password
-- Stay logged in after refreshes using Flask-Login sessions
-- Update profile info and change passwords
-- Request a password reset token and set a new password
-- Access a protected to-do dashboard only while authenticated
+## Activity 1 + Activity 2 Integration
+
+Activity 2 was developed on `act2-accounts`, branched from `main`, which contained the Activity 1 CRUD app. This preserves Activity 1 in the Activity 2 branch history; the CRUD interface and routes were extended to use authenticated accounts rather than replaced with a separate application.
+
+For Activity 3, `act3-ubac` was created from `act2-accounts`. That branch already contains the Activity 1 base and Activity 2 authentication commits, so the integration retains the existing Git history and does not copy files manually. No merge conflict was encountered when creating the Activity 3 branch. Submit `act3-ubac` through a pull request rather than developing directly on `main`.
+
+## Data Model
+
+- `users`: account identity and password hash.
+- `tasks`: task details, `user_id` for the creating/owning account, and nullable `list_id`. Personal tasks have no `list_id`; collaborative tasks point to a collaborative list.
+- `collaborative_lists`: list name and `owner_id`. The owner may add other registered users.
+- `collaborative_list_memberships`: unique `(list_id, user_id)` membership rows. The owner is authorized through `owner_id` and does not need a duplicate membership row.
+- `password_reset_tokens`: one-time reset token, owning user, creation/expiry timestamps, and used status. Account passwords themselves are hashed.
+
+The SQLite database file is `DATABASE` in the project root. Existing Activity 2 records are preserved; startup adds the collaborative-list tables and the task `list_id` column when needed. New personal and collaborative tasks are assigned to the authenticated user, and the database does not duplicate user profile data in task records.
+
+## Authorization and Example API Operations
+
+The UI selection is not trusted as authorization. Protected endpoints check the session user on the server:
+
+| Operation | Endpoint | Server-side access rule |
+| --- | --- | --- |
+| Register / login | `POST /api/register`, `POST /api/login` | Creates a password hash or authenticates credentials |
+| Read visible collaborative lists | `GET /api/lists` | Returns only lists owned by the user or where they have a membership |
+| Create a collaborative list | `POST /api/lists` | Sets `owner_id` from the logged-in session |
+| Add a member | `POST /api/lists/<list_id>/members` | Requires the logged-in user to own the list |
+| Read personal tasks | `GET /api/tasks` | Filters by the current user's `user_id` |
+| Read shared tasks | `GET /api/tasks?list_id=<id>` | Requires owner or membership access to that list |
+| Create a task | `POST /api/tasks` | Uses the session user as `user_id`; shared-list creation also checks membership |
+| Update / delete a task | `PUT/DELETE /api/tasks/<task_id>` | Requires personal ownership or access to the task's collaborative list |
+| Read / update profile | `GET/PUT /api/profile` | Requires authentication and accesses only `current_user` |
+
+An inaccessible or unknown list/task returns a 404-style response, preventing ID changes from revealing another user's private data. An unauthenticated request returns 401.
+
+## Local Installation and Run
+
+1. Install Python 3 and open a terminal in the repository root.
+2. (Recommended) Create and activate a virtual environment.
+3. Install dependencies:
+
+   ```bash
+   python -m pip install -r requirements.txt
+   ```
+
+4. Set a unique `SECRET_KEY` in the shell before starting the app. In PowerShell:
+
+   ```powershell
+   $env:SECRET_KEY = "replace-with-a-long-random-secret"
+   ```
+
+   `app.py` reads the environment variable directly; it does not automatically load values from `.env`.
+5. Start the server:
+
+   ```bash
+   python app.py
+   ```
+
+6. Open <http://127.0.0.1:5000/>. Register two separate demo accounts through the registration page, create 3-5 personal tasks for each, and use one account to create a collaborative list and add the other by username/email.
+
+The local password-reset request returns its token in the response for demonstration; it does not send email. Do not use the development fallback secret or local reset flow for a public deployment.
+
+## Manual Activity 3 Verification
+
+1. Register User A and User B through the application.
+2. Create personal tasks under both accounts and verify each account sees only its own.
+3. As User A, create a collaborative list and add User B by username or email.
+4. Confirm the list and its tasks appear for both users, while a separate list owned by User B does not appear for User A unless User A is added.
+5. Create, edit, complete, and delete a shared task as each member.
+6. While logged in as User B, try changing a User A-only task ID in a request. The server must return 404 and leave the task unchanged.
+7. Refresh the page and restart the backend. Confirm the session and each user's personal/shared lists and tasks persist.
 
 ## Tech Stack
 
@@ -19,196 +89,6 @@ The app uses a Flask backend with SQLite persistence and a simple HTML/CSS/JavaS
 | --- | --- |
 | Backend | Python + Flask |
 | Authentication | Flask-Login |
-| ORM | Flask-SQLAlchemy |
-| Database | SQLite |
-| Frontend | Vanilla HTML, CSS, JavaScript |
-| Password hashing | Werkzeug `generate_password_hash` / `check_password_hash` |
-
-
-## Features Implemented
-
-- Account registration with username/email, display name, and secure password hashing
-- Login validation and authenticated session cookies
-- Protected dashboard and task routes
-- Logout endpoint that destroys the active authentication state
-- Profile page updates for username/email, display name, and password
-- Password reset request + confirmation flow using a time-limited token
-- SQLite persistence for both account records and task records
-
-## Project Structure
-
-```text
-cmsc128-Lab1_CRUD_Sian/
-├── app.py                     # Flask app, auth routes, session logic, task routes
-├── models.py                  # SQLAlchemy models for User, Task, and password reset tokens
-├── DATABASE                  # SQLite database file (generated locally)
-├── templates/
-│   └── index.html            # Auth + dashboard UI shell
-├── static/
-│   ├── css/style.css        # Styling for auth screens, dashboard, and tasks
-│   └── js/main.js            # Client-side auth and task interactions
-├── requirements.txt
-├── .env.example              # Template for environment variable configuration
-├── .gitignore                # Ignores secrets and generated local files
-├── README.md
-└── screenshots/              # Existing app screenshots
-```
-
-## Local Installation
-
-1. Open a terminal in the project root.
-2. Create and activate a virtual environment if desired.
-3. Install dependencies:
-
-```bash
-python -m pip install -r requirements.txt
-```
-
-4. Set a secret key in the environment or copy the example file:
-
-```bash
-copy .env.example .env
-```
-
-Then edit `.env` and set a secure value for `SECRET_KEY`.
-
-5. Run the app:
-
-```bash
-python app.py
-```
-
-6. Open the browser at:
-
-```text
-http://127.0.0.1:5000/
-```
-
-## Database Setup and Persistence
-
-The project uses a local SQLite file named `DATABASE` in the project root. The database is created automatically when the Flask app starts.
-
-The models include:
-
-- User
-  - id
-  - username
-  - email
-  - display_name
-  - password_hash
-  - created_at
-- Task
-  - id
-  - title
-  - due_date
-  - priority
-  - category
-  - completed
-  - user_id
-  - created_at
-- PasswordResetToken
-  - id
-  - user_id
-  - token
-  - created_at
-  - expires_at 
-  - used
-
-This means account data and task data remain saved across browser refreshes and app restarts so long as the SQLite file remains present.
-
-## Authentication and Session Mechanism
-
-The app uses Flask-Login session cookies to persist the authenticated user state. After a successful login, the user receives a session cookie that remains active across browser refreshes and navigation. Logging out clears the session.
-
-Password protection is handled with Werkzeug hashing instead of storing plain text. The password is never displayed or stored in raw form.
-
-## Password Recovery Flow
-
-The password reset flow works as follows:
-
-1. The user submits a username/email to `/api/password-reset/request`.
-2. The server validates the account and generates a time-limited reset token.
-3. The user submits that token and a new password to `/api/password-reset/confirm`.
-4. The server updates the password hash and marks the token as used.
-
-This is a demo/local reset mechanism; it does not send an actual email, so it is suitable for local development and defense demonstration.
-
-## Example API Calls
-
-### Register
-
-```bash
-curl -X POST http://127.0.0.1:5000/api/register \
-  -H "Content-Type: application/json" \
-  -d '{
-        "username": "alice@example.com",
-        "display_name": "Alice",
-        "password": "securePass123"
-      }'
-```
-
-### Login
-
-```bash
-curl -X POST http://127.0.0.1:5000/api/login \
-  -H "Content-Type: application/json" \
-  -d '{
-        "username": "alice@example.com",
-        "password": "securePass123"
-      }'
-```
-
-### Get profile (authenticated)
-
-```bash
-curl http://127.0.0.1:5000/api/profile
-```
-
-### Request password reset
-
-```bash
-curl -X POST http://127.0.0.1:5000/api/password-reset/request \
-  -H "Content-Type: application/json" \
-  -d '{"username": "alice@example.com"}'
-```
-
-### Confirm password reset
-
-```bash
-curl -X POST http://127.0.0.1:5000/api/password-reset/confirm \
-  -H "Content-Type: application/json" \
-  -d '{
-        "token": "<reset-token>",
-        "password": "newPassword456!"
-      }'
-```
-
-## Next Activity Foundation
-
-This implementation already establishes the key pattern for the next activity: a user-specific to-do list.
-
-- `User` and `Task` are separate database models.
-- Each task stores a `user_id` so it can be assigned to a single account.
-- Task routes are filtered by `current_user.id`, which means one account cannot read or change another account's tasks.
-- This is the core user-isolation logic required for a personal to-do list system.
-
-## Security Notes
-
-- Passwords are hashed before storage.
-- Secrets are expected to live in a local `.env` file and are ignored by Git.
-- Account and task routes require authentication.
-- The app does not expose plain-text passwords in the database or UI.
-
-## Manual Verification
-
-A user can verify the app by doing the following:
-
-1. Register a new user
-2. Log in successfully
-3. Refresh the page and confirm that the dashboard remains available
-4. Log out and confirm the user is redirected to the auth screen
-5. Update profile info
-6. Request and confirm a password reset
-7. Use the app with the new password and ensure the old password no longer works
-
-
+| ORM / database | Flask-SQLAlchemy + SQLite |
+| Password hashing | Werkzeug |
+| Frontend | HTML, CSS, and vanilla JavaScript |
